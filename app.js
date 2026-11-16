@@ -1,3 +1,11 @@
+import { createElement } from "react";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
+import { SocialFeed } from "./src/SocialFeed.jsx";
+import { SocialFeedLayout } from "./src/SocialFeedLayout.tsx";
+import "./src/sqb-tokens.css";
+import "./styles.css";
+
 "use strict";
 
 const icons = {
@@ -11,7 +19,6 @@ const icons = {
   spark: '<path d="M12 2c0 6 4 10 10 10-6 0-10 4-10 10 0-6-4-10-10-10 6 0 10-4 10-10Z"/>',
   bars: '<path d="M3 3v18h18M8 16v-3m5 3V9m5 7V6"/>',
   people: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2M16 5a3 3 0 0 1 0 6m5 9v-2a5 5 0 0 0-3-4.6"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   download: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
   send: '<path d="m3 4 18 8-18 8 3-8zM6 12h15"/>',
@@ -76,7 +83,10 @@ try {
   storageAvailable = false;
 }
 
+const workspace = createRoot(document.querySelector("#workspace"));
+flushSync(() => workspace.render(createElement(SocialFeedLayout)));
 const main = document.querySelector("#main");
+let feedRoot;
 const topNav = document.querySelector("#top-nav");
 const sidebar = document.querySelector("#sidebar");
 const context = document.querySelector("#context");
@@ -183,41 +193,32 @@ function renderContext() {
 
 function resourcePost(resource) {
   const mentor = mentorFor(resource.mentor);
-  return `<article class="card post">
-    <div class="post-content">
-      <div class="post-header">
-        ${avatar(mentor)}<div><strong>${mentor.name}</strong><p class="muted small">Mentor · ${mentor.role}</p></div>
-        ${badge("Tài liệu", "green")}
-      </div>
-      <p>${resource.intro}</p>
-      <a class="resource-preview" href="#resource/${resource.id}">
-        ${icon("book")}<span><strong>${resource.title}</strong><small>${resource.subtitle}</small></span>
-        ${icon("arrow")}
-      </a>
-    </div>
-    <div class="post-footer">
-      <span class="muted small">${icon("clock")}${resource.time}</span>
-      ${link(`#resource/${resource.id}`, "Xem tài liệu", "arrow", "soft")}
-    </div>
-  </article>`;
+  return {
+    person: mentor,
+    meta: `Mentor · ${mentor.role}`,
+    label: "Tài liệu",
+    tone: "green",
+    text: resource.intro,
+    attachment: resource,
+    href: `#resource/${resource.id}`,
+    count: resource.time,
+    action: "Xem tài liệu",
+  };
 }
 
 function threadPost(thread) {
   const shared = thread.result?.shared;
-  return `<article class="card post">
-    <div class="post-content">
-      <div class="post-header">${avatar(thread)}
-        <div><strong>${escapeText(thread.author)}</strong><p class="muted small">${shared ? "Kinh nghiệm học tập" : "Cộng đồng hỏi đáp"}</p></div>
-        ${badge(shared ? "Kết quả" : thread.result ? "Đã giải quyết" : "Hỏi đáp", thread.result ? "green" : "orange")}
-      </div>
-      <h3 style="margin-top: 12px">${escapeText(thread.title)}</h3>
-      <p>${escapeText(shared ? thread.result.summary : thread.problem)}</p>
-    </div>
-    <div class="post-footer">
-      <span class="muted small">${icon("chat")}${thread.messages.length} phản hồi</span>
-      ${link(`#thread/${encodeURIComponent(thread.id)}`, "Xem trao đổi", "arrow", "soft")}
-    </div>
-  </article>`;
+  return {
+    person: { ...thread, name: thread.author },
+    meta: shared ? "Kinh nghiệm học tập" : "Cộng đồng hỏi đáp",
+    label: shared ? "Kết quả" : thread.result ? "Đã giải quyết" : "Hỏi đáp",
+    tone: thread.result ? "green" : "orange",
+    title: thread.title,
+    text: shared ? thread.result.summary : thread.problem,
+    href: `#thread/${encodeURIComponent(thread.id)}`,
+    count: `${thread.messages.length} phản hồi`,
+    action: "Xem trao đổi",
+  };
 }
 
 function searchable(value) {
@@ -232,7 +233,7 @@ function feedUrl(filter, query = "") {
   return `#home${filter ? `/${filter}` : ""}${query ? `?${params}` : ""}`;
 }
 
-function home(filter, query) {
+function feedProps(filter, query) {
   const chosen = resourceFor(filter);
   const terms = searchable(query).split(/\s+/).filter(Boolean);
   const matches = fields => {
@@ -255,34 +256,15 @@ function home(filter, query) {
     ...threads.filter(thread => thread.id === "focus").map(threadPost),
     ...resourcePosts.slice(1),
   ];
-  const empty = query ? "Không tìm thấy nội dung phù hợp." : "Bạn chưa đăng vướng mắc nào.";
-  return `
-    <header class="feed-heading">
-      <p>${icon("people")} Cộng đồng học tập</p>
-      <h1>${chosen ? chosen.topic : "Bảng tin học tập"}</h1>
-    </header>
-    <section class="card post-composer" aria-label="Chia sẻ với cộng đồng">
-      <div class="composer">
-        ${avatar(me)}
-        <a class="composer-prompt" href="#ask">Bạn đang vướng ở đâu, Minh Anh?</a>
-      </div>
-      <div class="composer-actions">
-        ${link("#ask", "Hỏi mentor", "chat")}
-        ${link("#home/resources", "Tài liệu", "book")}
-        ${link("#plan", "Kế hoạch", "list")}
-      </div>
-    </section>
-    <form id="search-form" class="card composer search-form" role="search" data-filter="${filter}">
-      <input type="search" name="query" aria-label="Tìm tài liệu và hỏi đáp" placeholder="Tìm tài liệu và hỏi đáp..." maxlength="120" value="${escapeText(query)}">
-      <button class="button" type="submit">Tìm kiếm</button>
-      ${query ? link(feedUrl(filter), "Xóa tìm kiếm", "", "outline") : ""}
-    </form>
-    <div class="feed-toolbar">
-      <nav class="filters" aria-label="Lọc bảng tin">${feedFilters.map(([id, label]) =>
-        `<a class="filter${filter === id ? " active" : ""}" href="${escapeText(feedUrl(id, query))}"${filter === id ? ' aria-current="true"' : ""}>${label}</a>`).join("")}</nav>
-    </div>
-    ${query ? `<p role="status" class="muted small">${posts.length} kết quả cho “${escapeText(query)}”</p>` : ""}
-    ${posts.length ? posts.join("") : `<p class="card section muted">${empty}</p>`}`;
+  return {
+    title: chosen ? chosen.topic : "Bảng tin học tập",
+    user: me,
+    query,
+    filter,
+    filters: feedFilters.map(([id, label]) => ({ id, label, href: feedUrl(id, query) })),
+    clearUrl: feedUrl(filter),
+    posts,
+  };
 }
 
 function resourceDetail(resource) {
@@ -412,14 +394,26 @@ function render(focus = false) {
     case "resource": content = resource && resourceDetail(resource); break;
     case "thread": content = thread && discussion(thread); break;
     case "result": content = thread && result(thread); break;
-    default: activePage = "home"; content = home(filter, query);
+    default: activePage = "home";
   }
-  if (!content) {
+  if (activePage !== "home" && !content) {
     content = `<section class="card section stack"><h1>Không tìm thấy nội dung</h1><div>${link("#home", "Về bảng tin", "home", "soft")}</div></section>`;
   }
   renderNav(activePage, filter);
   renderContext();
-  main.innerHTML = content;
+  if (activePage === "home") {
+    if (!feedRoot) {
+      main.replaceChildren();
+      feedRoot = createRoot(main);
+    }
+    flushSync(() => feedRoot.render(createElement(SocialFeed, feedProps(filter, query))));
+  } else {
+    if (feedRoot) {
+      feedRoot.unmount();
+      feedRoot = undefined;
+    }
+    main.innerHTML = content;
+  }
   document.title = `${main.querySelector("h1").textContent} · Cùng Học`;
   if (focus) {
     window.scrollTo(0, 0);

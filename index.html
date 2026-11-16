@@ -6,8 +6,7 @@
   <meta name="theme-color" content="#080e0b">
   <meta name="description" content="Cùng Học — không gian tìm tài liệu, lập kế hoạch và hỏi đáp cùng mentor.">
   <title>Cùng Học — Cộng đồng học tập</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
+  <script type="module" src="/app.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -22,11 +21,7 @@
       </div>
     </div>
   </header>
-  <div class="layout">
-    <aside id="sidebar" class="card sidebar" aria-label="Lối tắt"></aside>
-    <main id="main" class="main" tabindex="-1"></main>
-    <aside id="context" class="context" aria-label="Tiến độ và mentor"></aside>
-  </div>
+  <div id="workspace"></div>
   <div id="toast" class="toast" role="status"></div>
 </body>
 </html>

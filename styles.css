@@ -2,16 +2,16 @@
   color-scheme: dark;
   font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
-  background: #080e0b;
-  --ink: #f4faf6;
-  --muted: #a1bbab;
-  --accent: #06c384;
-  --accent-hover: #43dda5;
+  background: var(--primitive-dark-bg-base);
+  --ink: var(--primitive-dark-text-primary);
+  --muted: var(--primitive-dark-text-muted);
+  --accent: var(--primitive-green-500);
+  --accent-hover: var(--primitive-green-400);
   --accent-ink: #08251a;
-  --line: #ffffff1a;
-  --soft: #123528;
-  --surface: #0f1c16;
-  --surface-hover: #1a2a21;
+  --line: var(--primitive-dark-border-white-dim);
+  --soft: var(--primitive-green-950);
+  --surface: var(--primitive-dark-bg-card);
+  --surface-hover: var(--primitive-dark-bg-card-hover);
   --shadow: 0 8px 24px #0003;
 }
 * { box-sizing: border-box; }
@@ -115,6 +115,7 @@ h3 { font-size: 16px; }
 .post-header, .person { display: flex; align-items: center; gap: 10px; }
 .post-header .badge { margin-left: auto; }
 .post-content > p { margin-top: 11px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.post-title { margin-top: 12px; }
 .badge {
   display: inline-flex; align-items: center; gap: 5px; max-width: 100%; width: fit-content;
   border-radius: 6px; padding: 4px 8px; color: #9dd3ff; background: #16314a;
