@@ -144,8 +144,8 @@ function renderNav(page, filter) {
   const colors = ["#3a8c77", "#6c6acf", "#c66f2c"];
   sidebar.innerHTML = `
     <div class="side-profile">${avatar(me)}<div><strong>Minh Anh</strong><span class="muted small">Tài khoản mẫu</span></div></div>
-    <p class="side-label">Không gian của bạn</p>
-    <nav aria-label="Không gian của bạn">${navigation.map(item => navLink(item, "side-link")).join("")}</nav>
+    <p class="side-label">Lối tắt</p>
+    <nav aria-label="Không gian của bạn">${navigation.map(item => navLink(item, "side-link")).join("")}<a class="side-link${filter === "mine" ? " active" : ""}" href="#home/mine">${icon("people")} Vướng mắc của tôi</a></nav>
     <hr class="side-divider">
     <p class="side-label">Chủ đề học tập</p>
     <nav aria-label="Chủ đề học tập">${resources.map((resource, index) => `
@@ -178,46 +178,7 @@ function renderContext() {
       </a>`).join("")}</div>
       ${link("#ask", "Đặt câu hỏi", "chat", "outline full")}
     </section>
-    <p class="context-footer">Cùng Học · Phiên bản MVP</p>`;
-}
-
-const heroArt = `<svg class="hero-art" viewBox="0 0 330 228" fill="none" aria-hidden="true">
-  <circle cx="221" cy="116" r="91" fill="#ffffff" opacity=".10"/>
-  <circle cx="221" cy="116" r="110" stroke="#fff" opacity=".17"/>
-  <path d="M52 175c43 21 109 28 165 17 70-13 116-45 108-70-4-12-22-19-47-22" stroke="#92b8ff" stroke-width="1.5" stroke-dasharray="4 6" opacity=".65"/>
-  <path d="M108 67l8 3-8 3-3 8-3-8-8-3 8-3 3-8zM290 51l7 2-7 3-3 7-2-7-7-3 7-2 2-7z" fill="#e2efff"/>
-  <circle cx="84" cy="127" r="3" fill="#a9d3ff"/><circle cx="298" cy="169" r="4" fill="#a9d3ff"/>
-  <g transform="rotate(-12 200 116)">
-    <rect x="127" y="76" width="153" height="104" rx="13" fill="#123879" opacity=".36"/>
-    <rect x="122" y="70" width="153" height="104" rx="13" fill="#91c8ff"/>
-    <path d="M198 83c-18-12-46-14-68-10v88c26-4 48-1 68 11 19-12 42-15 68-11V73c-22-4-50-2-68 10z" fill="#f6fbff"/>
-    <path d="M198 83v89" stroke="#8dbaff" stroke-width="2"/>
-    <path d="M143 95c14-1 30 1 44 7m-44 8c14-1 30 1 44 7m-44 8c14-1 30 1 44 7m23-30c14-6 29-8 43-7m-43 22c14-6 29-8 43-7m-43 22c14-6 29-8 43-7" stroke="#a5c9ff" stroke-width="3" stroke-linecap="round"/>
-    <path d="M241 73l12-1v35l-6-4-6 5z" fill="#ffce78"/>
-  </g>
-  <g transform="rotate(12 272 135)">
-    <rect x="251" y="119" width="47" height="34" rx="8" fill="#d7f7e9"/>
-    <path d="M263 151v10l10-10m-9-15 6 6 12-12" stroke="#24876e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-</svg>`;
-
-const coverArt = `<svg class="cover-art" viewBox="0 0 250 150" fill="none" aria-hidden="true">
-  <circle cx="153" cy="74" r="65" fill="currentColor" opacity=".08"/>
-  <circle cx="153" cy="74" r="77" stroke="currentColor" opacity=".16"/>
-  <rect x="115" y="30" width="82" height="95" rx="9" fill="currentColor" opacity=".18" transform="rotate(13 115 30)"/>
-  <rect x="100" y="38" width="85" height="93" rx="9" fill="#fff" transform="rotate(-12 100 38)"/>
-  <g transform="rotate(-12 100 38)" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <path d="m113 65 4 4 7-8m-11 25 4 4 7-8m-11 25 4 4 7-8" stroke-width="2.4"/>
-    <path d="M133 65h32m-32 21h32m-32 21h22" stroke-width="3" opacity=".27"/>
-  </g>
-  <path d="m204 26 3 6 6 3-6 3-3 6-3-6-6-3 6-3zM77 98l2 4 5 2-5 2-2 5-2-5-4-2 4-2z" fill="currentColor" opacity=".52"/>
-</svg>`;
-
-function cover(resource, detail = false) {
-  return `<div class="resource-cover${resource.id === "active-recall" ? "" : " focus"}${detail ? " detail-cover" : ""}">
-    <div class="cover-copy"><small>${resource.topic.toLocaleUpperCase("vi")}</small><strong>${resource.title}</strong><p>${resource.subtitle}</p></div>
-    ${coverArt}
-  </div>`;
+    `;
 }
 
 function resourcePost(resource) {
@@ -229,8 +190,11 @@ function resourcePost(resource) {
         ${badge("Tài liệu", "green")}
       </div>
       <p>${resource.intro}</p>
+      <a class="resource-preview" href="#resource/${resource.id}">
+        ${icon("book")}<span><strong>${resource.title}</strong><small>${resource.subtitle}</small></span>
+        ${icon("arrow")}
+      </a>
     </div>
-    <a href="#resource/${resource.id}" aria-label="Xem tài liệu ${resource.title}">${cover(resource)}</a>
     <div class="post-footer">
       <span class="muted small">${icon("clock")}${resource.time}</span>
       ${link(`#resource/${resource.id}`, "Xem tài liệu", "arrow", "soft")}
@@ -293,19 +257,20 @@ function home(filter, query) {
   ];
   const empty = query ? "Không tìm thấy nội dung phù hợp." : "Bạn chưa đăng vướng mắc nào.";
   return `
-    <section class="hero">
-      <div class="hero-copy">
-        <span class="eyebrow">${icon("spark")} Cộng đồng học tập</span>
-        <h1>Chào Minh Anh! <span aria-hidden="true">👋</span></h1>
-        <p>Khám phá cách học phù hợp, lên kế hoạch và cùng mentor gỡ rối khi bạn cần.</p>
-        ${link("#home/resources", "Khám phá tài liệu", "book", "inverse")}
+    <header class="feed-heading">
+      <p>${icon("people")} Cộng đồng học tập</p>
+      <h1>${chosen ? chosen.topic : "Bảng tin học tập"}</h1>
+    </header>
+    <section class="card post-composer" aria-label="Chia sẻ với cộng đồng">
+      <div class="composer">
+        ${avatar(me)}
+        <a class="composer-prompt" href="#ask">Bạn đang vướng ở đâu, Minh Anh?</a>
       </div>
-      ${heroArt}
-    </section>
-    <section class="card composer" aria-label="Chia sẻ với cộng đồng">
-      ${avatar(me)}
-      <a class="composer-prompt" href="#ask">Bạn đang vướng ở đâu, Minh Anh?</a>
-      ${link("#ask", "Đăng vướng mắc", "plus")}
+      <div class="composer-actions">
+        ${link("#ask", "Hỏi mentor", "chat")}
+        ${link("#home/resources", "Tài liệu", "book")}
+        ${link("#plan", "Kế hoạch", "list")}
+      </div>
     </section>
     <form id="search-form" class="card composer search-form" role="search" data-filter="${filter}">
       <input type="search" name="query" aria-label="Tìm tài liệu và hỏi đáp" placeholder="Tìm tài liệu và hỏi đáp..." maxlength="120" value="${escapeText(query)}">
@@ -313,7 +278,6 @@ function home(filter, query) {
       ${query ? link(feedUrl(filter), "Xóa tìm kiếm", "", "outline") : ""}
     </form>
     <div class="feed-toolbar">
-      <h2 class="feed-title">${icon("home")}${chosen ? chosen.topic : "Bảng tin học tập"}</h2>
       <nav class="filters" aria-label="Lọc bảng tin">${feedFilters.map(([id, label]) =>
         `<a class="filter${filter === id ? " active" : ""}" href="${escapeText(feedUrl(id, query))}"${filter === id ? ' aria-current="true"' : ""}>${label}</a>`).join("")}</nav>
     </div>
@@ -326,7 +290,6 @@ function resourceDetail(resource) {
   return `${back("#home/resources", "Tất cả tài liệu")}
     <section class="card section stack">
       <div class="page-head">${badge(resource.topic, "green")}<h1>${resource.method}</h1><p>${resource.intro}</p></div>
-      ${cover(resource, true)}
       <div><h2>Cách thực hiện</h2><ol class="steps">${resource.steps.map(step => `<li>${step}</li>`).join("")}</ol></div>
       <div class="actions section-divider">
         ${added ? link("#plan", "Đã thêm · Mở kế hoạch", "check", "soft") : `<button class="button" type="button" data-add-resource="${resource.id}">${icon("plus")} Áp dụng vào kế hoạch</button>`}
@@ -457,7 +420,7 @@ function render(focus = false) {
   renderNav(activePage, filter);
   renderContext();
   main.innerHTML = content;
-  document.title = `${main.querySelector("h1").textContent.replace(" 👋", "")} · Cùng Học`;
+  document.title = `${main.querySelector("h1").textContent} · Cùng Học`;
   if (focus) {
     window.scrollTo(0, 0);
     const editing = main.querySelector("#task-form[data-edit-id] input");
