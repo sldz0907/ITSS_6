@@ -256,18 +256,42 @@ function threadPost(thread) {
   </article>`;
 }
 
-function home(filter) {
+function searchable(value) {
+  return value.toLocaleLowerCase("vi").normalize("NFD").replace(/\p{M}/gu, "").replaceAll("đ", "d");
+}
+
+const feedFilters = [["", "Tất cả"], ["resources", "Tài liệu"], ["questions", "Hỏi đáp"], ["mine", "Của tôi"]];
+
+function feedUrl(filter, query = "") {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  return `#home${filter ? `/${filter}` : ""}${query ? `?${params}` : ""}`;
+}
+
+function home(filter, query) {
   const chosen = resourceFor(filter);
-  const filters = [["", "Tất cả"], ["resources", "Tài liệu"], ["questions", "Hỏi đáp"]];
-  const posts = filter === "questions"
-    ? state.threads.map(threadPost)
-    : chosen
-      ? [resourcePost(chosen)]
-      : filter === "resources"
-        ? resources.map(resourcePost)
-        : [...state.threads.filter(thread => thread.id !== "focus").map(threadPost),
-          resourcePost(resources[0]), ...state.threads.filter(thread => thread.id === "focus").map(threadPost),
-          ...resources.slice(1).map(resourcePost)];
+  const terms = searchable(query).split(/\s+/).filter(Boolean);
+  const matches = fields => {
+    const text = searchable(fields.join(" "));
+    return terms.every(term => text.includes(term));
+  };
+  const resourcePosts = (chosen ? [chosen] : resources)
+    .filter(resource => matches([resource.title, resource.method, resource.topic, resource.intro]))
+    .map(resourcePost);
+  const threads = state.threads.filter(thread => matches([
+    thread.title, thread.problem, thread.author, thread.result?.shared ? thread.result.summary : "",
+  ]));
+  let posts;
+  if (chosen || filter === "resources") posts = resourcePosts;
+  else if (filter === "questions") posts = threads.map(threadPost);
+  else if (filter === "mine") posts = threads.filter(thread => thread.author === me.name).map(threadPost);
+  else posts = [
+    ...threads.filter(thread => thread.id !== "focus").map(threadPost),
+    ...resourcePosts.slice(0, 1),
+    ...threads.filter(thread => thread.id === "focus").map(threadPost),
+    ...resourcePosts.slice(1),
+  ];
+  const empty = query ? "Không tìm thấy nội dung phù hợp." : "Bạn chưa đăng vướng mắc nào.";
   return `
     <section class="hero">
       <div class="hero-copy">
@@ -283,12 +307,18 @@ function home(filter) {
       <a class="composer-prompt" href="#ask">Bạn đang vướng ở đâu, Minh Anh?</a>
       ${link("#ask", "Đăng vướng mắc", "plus")}
     </section>
+    <form id="search-form" class="card composer search-form" role="search" data-filter="${filter}">
+      <input type="search" name="query" aria-label="Tìm tài liệu và hỏi đáp" placeholder="Tìm tài liệu và hỏi đáp..." maxlength="120" value="${escapeText(query)}">
+      <button class="button" type="submit">Tìm kiếm</button>
+      ${query ? link(feedUrl(filter), "Xóa tìm kiếm", "", "outline") : ""}
+    </form>
     <div class="feed-toolbar">
       <h2 class="feed-title">${icon("home")}${chosen ? chosen.topic : "Bảng tin học tập"}</h2>
-      <nav class="filters" aria-label="Lọc bảng tin">${filters.map(([id, label]) =>
-        `<a class="filter${filter === id ? " active" : ""}" href="#home${id ? `/${id}` : ""}"${filter === id ? ' aria-current="true"' : ""}>${label}</a>`).join("")}</nav>
+      <nav class="filters" aria-label="Lọc bảng tin">${feedFilters.map(([id, label]) =>
+        `<a class="filter${filter === id ? " active" : ""}" href="${escapeText(feedUrl(id, query))}"${filter === id ? ' aria-current="true"' : ""}>${label}</a>`).join("")}</nav>
     </div>
-    ${posts.join("")}`;
+    ${query ? `<p role="status" class="muted small">${posts.length} kết quả cho “${escapeText(query)}”</p>` : ""}
+    ${posts.length ? posts.join("") : `<p class="card section muted">${empty}</p>`}`;
 }
 
 function resourceDetail(resource) {
@@ -305,22 +335,28 @@ function resourceDetail(resource) {
     </section>`;
 }
 
-function plan() {
+function plan(editId) {
+  const editing = state.tasks.find(task => task.id === editId);
   return `<section class="card section stack">
     <div class="page-head">${badge("Tiến độ cá nhân")}<h1>Kế hoạch của tôi</h1><p>Chia nhỏ việc học và đánh dấu từng bước bạn đã hoàn thành.</p></div>
     ${progress()}
     <div><h2>Việc cần làm</h2>
-      ${state.tasks.map(task => `<label class="task${task.done ? " done" : ""}">
-        <input type="checkbox" data-task="${escapeText(task.id)}"${task.done ? " checked" : ""}><span>${escapeText(task.text)}</span>
-      </label>`).join("")}
+      ${state.tasks.map(task => `<div class="task-row">
+        <label class="task${task.done ? " done" : ""}">
+          <input type="checkbox" data-task="${escapeText(task.id)}"${task.done ? " checked" : ""}><span>${escapeText(task.text)}</span>
+        </label>
+        <a class="task-edit" href="#plan/${encodeURIComponent(task.id)}" aria-label="Sửa mục tiêu ${escapeText(task.text)}">Sửa</a>
+      </div>`).join("")}
     </div>
-    <form class="task-form" id="task-form">
-      <input name="task" aria-label="Mục tiêu mới" placeholder="Viết một mục tiêu nhỏ..." required maxlength="150">
-      <button class="button" type="submit">${icon("plus")} Thêm</button>
+    <form class="task-form" id="task-form"${editing ? ` data-edit-id="${escapeText(editing.id)}"` : ""}>
+      <input name="task" aria-label="${editing ? "Sửa mục tiêu" : "Mục tiêu mới"}" placeholder="Viết một mục tiêu nhỏ..." required maxlength="150" value="${escapeText(editing?.text)}">
+      ${editing ? `<button class="button" type="submit">Lưu</button>${link("#plan", "Hủy", "", "outline")}`
+        : `<button class="button" type="submit">${icon("plus")} Thêm</button>`}
     </form>
     <div class="actions section-divider">
       ${link("#ask/plan", "Hỏi mentor về kế hoạch", "chat", "soft")}
       ${link("#home/resources", "Xem tài liệu gợi ý", "book", "outline")}
+      ${link("#home/mine", "Vướng mắc của tôi", "chat", "outline")}
     </div>
   </section>`;
 }
@@ -399,19 +435,21 @@ function result(thread) {
 }
 
 function render(focus = false) {
-  const [page = "home", id = "", extra = ""] = location.hash.slice(1).split("/");
+  const [path, params] = location.hash.slice(1).split("?", 2);
+  const [page = "home", id = "", extra = ""] = path.split("/");
+  const query = (new URLSearchParams(params).get("q") ?? "").trim().slice(0, 120);
   const thread = state.threads.find(item => item.id === id);
   const resource = resourceFor(id);
-  const filter = page === "home" && (resource || id === "resources" || id === "questions") ? id : "";
+  const filter = page === "home" && (resource || feedFilters.some(([value]) => value === id)) ? id : "";
   let activePage = page;
   let content;
   switch (page) {
-    case "plan": content = plan(); break;
+    case "plan": content = plan(id); break;
     case "ask": content = ask(id, extra); break;
     case "resource": content = resource && resourceDetail(resource); break;
     case "thread": content = thread && discussion(thread); break;
     case "result": content = thread && result(thread); break;
-    default: activePage = "home"; content = home(filter);
+    default: activePage = "home"; content = home(filter, query);
   }
   if (!content) {
     content = `<section class="card section stack"><h1>Không tìm thấy nội dung</h1><div>${link("#home", "Về bảng tin", "home", "soft")}</div></section>`;
@@ -422,7 +460,8 @@ function render(focus = false) {
   document.title = `${main.querySelector("h1").textContent.replace(" 👋", "")} · Cùng Học`;
   if (focus) {
     window.scrollTo(0, 0);
-    main.focus({ preventScroll: true });
+    const editing = main.querySelector("#task-form[data-edit-id] input");
+    (editing ?? main).focus({ preventScroll: !editing });
   }
 }
 
@@ -487,9 +526,21 @@ main.addEventListener("submit", event => {
   event.preventDefault();
   const form = event.target;
   const data = new FormData(form);
+  if (form.id === "search-form") {
+    location.hash = feedUrl(form.dataset.filter, String(data.get("query")).trim());
+    return;
+  }
   if (form.id === "task-form") {
     const task = getText(form, data, "task");
     if (!task) return;
+    const editing = state.tasks.find(item => item.id === form.dataset.editId);
+    if (editing) {
+      editing.text = task;
+      save();
+      location.hash = "#plan";
+      notify("Đã cập nhật mục tiêu.");
+      return;
+    }
     state.tasks.push({ id: newId(), text: task, done: false });
     save();
     render();
